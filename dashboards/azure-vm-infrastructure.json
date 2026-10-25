@@ -1,0 +1,63 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Azure VM & Node Host Performance",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "azure-managed-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "iops" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "id": 2,
+      "title": "Disk IOPS (Reads vs Writes)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(node_disk_reads_completed_total[5m]))",
+          "legendFormat": "{{ instance }} - Reads/sec",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (instance) (rate(node_disk_writes_completed_total[5m]))",
+          "legendFormat": "{{ instance }} - Writes/sec",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "azure-managed-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "Bps" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "id": 3,
+      "title": "Network Bandwidth (Transmit / Receive)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(node_network_receive_bytes_total{device!~'lo|veth.*'}[5m]))",
+          "legendFormat": "{{ instance }} - Rx",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (instance) (rate(node_network_transmit_bytes_total{device!~'lo|veth.*'}[5m]))",
+          "legendFormat": "{{ instance }} - Tx",
+          "refId": "B"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "tags": ["azure", "vm", "host", "infrastructure"],
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "Azure Host VM & Node Infrastructure",
+  "uid": "azure-vm-infrastructure"
+}

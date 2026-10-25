@@ -1,0 +1,28 @@
+// ==============================================================================
+// 1. Network Security Group (NSG) Denied Flow Logs
+// ==============================================================================
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(6h)
+| where FlowType_s == "MaliciousFlow" or FlowStatus_s == "D"
+| summarize DeniedPackets = count() by SrcIP_s, DestIP_s, DestPort_d, L7Protocol_s, NSGList_s
+| order by DeniedPackets desc
+
+// ==============================================================================
+// 2. Azure Role Assignment Modifications (RBAC Audit)
+// ==============================================================================
+AzureActivity
+| where TimeGenerated > ago(7d)
+| where OperationNameValue has "Microsoft.Authorization/roleAssignments/write"
+    or OperationNameValue has "Microsoft.Authorization/roleAssignments/delete"
+| project TimeGenerated, Caller, CallerIpAddress, OperationNameValue, ActivityStatusValue, ResourceId
+| order by TimeGenerated desc
+
+// ==============================================================================
+// 3. Key Vault Secret Access Failures & Unauthorized Probes
+// ==============================================================================
+AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.KEYVAULT"
+| where TimeGenerated > ago(24h)
+| where httpStatusCode_d in (401, 403)
+| project TimeGenerated, OperationName, CallerIPAddress, ResultDescription, identity_claim_oid_g
+| order by TimeGenerated desc

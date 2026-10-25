@@ -1,0 +1,36 @@
+// ==============================================================================
+// 1. Detect Pods Terminated Due to OOMKilled
+// ==============================================================================
+KubePodInventory
+| where TimeGenerated > ago(24h)
+| where ContainerStatusReason == "OOMKilled"
+| project TimeGenerated, Namespace, Name, ContainerName, ContainerStatusReason, ExitCode, PodStatus
+| order by TimeGenerated desc
+
+// ==============================================================================
+// 2. Container Restart Frequency & CrashLooping Detection
+// ==============================================================================
+KubePodInventory
+| where TimeGenerated > ago(6h)
+| summarize MaxRestarts = max(ContainerRestartCount) by Namespace, Name, ContainerName
+| where MaxRestarts > 5
+| order by MaxRestarts desc
+
+// ==============================================================================
+// 3. Container Error and Exception Log Aggregation
+// ==============================================================================
+ContainerLogV2
+| where TimeGenerated > ago(1h)
+| where LogMessage has_any ("FATAL", "ERROR", "Exception", "panic", "unhandled")
+| project TimeGenerated, PodNamespace, PodName, ContainerName, LogMessage
+| order by TimeGenerated desc
+| limit 100
+
+// ==============================================================================
+// 4. Failed Kubernetes Image Pull & Eviction Events
+// ==============================================================================
+KubeEvents
+| where TimeGenerated > ago(12h)
+| where Reason in ("Failed", "FailedCreate", "FailedScheduling", "Evicted", "BackOff", "ImagePullBackOff")
+| project TimeGenerated, Namespace, ObjectKind, Name, Reason, Message
+| order by TimeGenerated desc

@@ -1,0 +1,67 @@
+name: "Observability as Code CI"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  validate-prom-rules:
+    name: "Validate Prometheus Rules & Syntax"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Install Promtool"
+        run: |
+          PROM_VERSION="2.51.0"
+          curl -sLO https://github.com/prometheus/prometheus/releases/download/v${PROM_VERSION}/prometheus-${PROM_VERSION}.linux-amd64.tar.gz
+          tar -xzf prometheus-${PROM_VERSION}.linux-amd64.tar.gz
+          sudo mv prometheus-${PROM_VERSION}.linux-amd64/promtool /usr/local/bin/
+          promtool --version
+
+      - name: "Check Prometheus Rules Syntax"
+        run: |
+          for rule_file in k8s-monitoring/prometheus-rules/*.yaml; do
+            echo "Linting $rule_file with promtool..."
+            promtool check rules "$rule_file"
+          done
+
+      - name: "Validate YAML Manifests Syntax"
+        run: |
+          python3 -c "import yaml, glob; [list(yaml.safe_load_all(open(f))) for f in glob.glob('k8s-monitoring/**/*.yaml', recursive=True) + glob.glob('alerting/*.yaml')]; print('All YAML files are syntactically valid.')"
+
+  validate-dashboards:
+    name: "Validate Grafana Dashboards JSON"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Lint JSON Dashboards"
+        run: |
+          for db in dashboards/*.json; do
+            echo "Verifying JSON schema integrity for $db..."
+            jq empty "$db"
+          done
+          echo "All Grafana dashboard JSON files are valid!"
+
+  validate-terraform:
+    name: "Validate Observability Terraform IaC"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: "Terraform Init & Validate"
+        run: |
+          cd infra
+          terraform init -backend=false
+          terraform validate

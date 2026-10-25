@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: order-processing-servicemonitor
+  namespace: monitoring
+  labels:
+    release: prometheus-stack
+    app.kubernetes.io/part-of: retail-platform
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: order-processing-api
+  namespaceSelector:
+    matchNames:
+      - dev-orders
+      - staging-orders
+      - prod-orders
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: "(http_requests_total|http_request_duration_seconds_bucket|process_cpu_seconds_total|process_resident_memory_bytes)"
+          action: keep

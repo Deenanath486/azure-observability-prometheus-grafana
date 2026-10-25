@@ -1,0 +1,42 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'cluster', 'service', 'namespace']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'teams-default-alerts'
+
+  routes:
+    # Critical alerts route immediately to PagerDuty / On-Call webhook
+    - match:
+        severity: critical
+      receiver: 'pagerduty-high-priority'
+      repeat_interval: 1h
+      continue: true
+
+    # Warnings route to MS Teams / Slack engineering channel
+    - match:
+        severity: warning
+      receiver: 'teams-default-alerts'
+
+# Inhibition rules: Suppress pod alerts if the host node is down
+inhibit_rules:
+  - source_match:
+      alertname: 'KubeNodeNotReady'
+    target_match:
+      alertname: 'KubePodCrashLooping'
+    equal: ['node', 'instance']
+
+receivers:
+  - name: 'teams-default-alerts'
+    webhook_configs:
+      - url: 'https://webhook.office.com/webhookb2/azure-devops-alerts'
+        send_resolved: true
+
+  - name: 'pagerduty-high-priority'
+    pagerduty_configs:
+      - service_key: '00000000000000000000000000000000'
+        severity: 'critical'
+        send_resolved: true

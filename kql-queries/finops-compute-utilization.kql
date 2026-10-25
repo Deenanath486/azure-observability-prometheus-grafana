@@ -1,0 +1,21 @@
+// ==============================================================================
+// 1. Identify Over-Provisioned Nodes (Avg CPU < 20% over 7 days)
+// ==============================================================================
+Perf
+| where TimeGenerated > ago(7d)
+| where ObjectName == "Processor" and CounterName == "% Processor Time" and InstanceName == "_Total"
+| summarize AvgCPU = avg(CounterValue), MaxCPU = max(CounterValue) by Computer
+| where AvgCPU < 20 and MaxCPU < 40
+| project Computer, AvgCPU = round(AvgCPU, 2), MaxCPU = round(MaxCPU, 2)
+| order by AvgCPU asc
+
+// ==============================================================================
+// 2. Identify Idle Memory Allocations on Cluster Nodes
+// ==============================================================================
+Perf
+| where TimeGenerated > ago(3d)
+| where ObjectName == "Memory" and CounterName == "% Available Memory"
+| summarize AvgFreeMemoryPercent = avg(CounterValue) by Computer
+| where AvgFreeMemoryPercent > 70
+| project Computer, AvgFreeMemoryPercent = round(AvgFreeMemoryPercent, 2)
+| order by AvgFreeMemoryPercent desc

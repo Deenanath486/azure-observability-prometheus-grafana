@@ -1,0 +1,19 @@
+// ==============================================================================
+// 1. Application Gateway 5xx Spike & High Latency Paths
+// ==============================================================================
+AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.NETWORK" and Category == "ApplicationGatewayAccessLog"
+| where TimeGenerated > ago(4h)
+| where httpStatus_d >= 500
+| summarize ErrorCount = count(), AvgLatencyMs = avg(timeTaken_d) by requestUri_s, httpStatus_d, host_s
+| order by ErrorCount desc
+
+// ==============================================================================
+// 2. Slow API Endpoints (P95 Latency > 1000ms)
+// ==============================================================================
+AzureDiagnostics
+| where ResourceProvider == "MICROSOFT.NETWORK" and Category == "ApplicationGatewayAccessLog"
+| where TimeGenerated > ago(2h)
+| summarize P95_Latency_Ms = percentile(timeTaken_d, 95) by requestUri_s
+| where P95_Latency_Ms > 1000
+| order by P95_Latency_Ms desc

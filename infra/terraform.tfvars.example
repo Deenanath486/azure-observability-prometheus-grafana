@@ -1,0 +1,11 @@
+resource_group_name = "rg-observability-prod"
+location            = "East US"
+environment         = "prod"
+log_retention_days  = 30
+
+tags = {
+  Environment = "Production"
+  ManagedBy   = "Terraform"
+  Project     = "Observability-SRE"
+  Owner       = "Deenanath Yadav"
+}

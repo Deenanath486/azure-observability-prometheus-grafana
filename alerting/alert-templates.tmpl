@@ -1,0 +1,16 @@
+{{ define "teams.title" }}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.alertname }} ({{ .CommonLabels.severity }})
+{{ end }}
+
+{{ define "teams.text" }}
+**Alert Summary:** {{ .CommonAnnotations.summary }}
+**Severity:** `{{ .CommonLabels.severity }}`
+**Cluster/Namespace:** `{{ .CommonLabels.namespace }}`
+
+---
+{{ range .Alerts }}
+* **Description:** {{ .Annotations.description }}
+* **Started At:** {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if .Annotations.runbook_url }}* **Runbook:** [View Incident Runbook]({{ .Annotations.runbook_url }}){{ end }}
+{{ end }}
+{{ end }}

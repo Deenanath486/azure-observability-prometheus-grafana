@@ -1,0 +1,43 @@
+groups:
+  - name: kubernetes-nodes-alerts
+    rules:
+      - alert: KubeNodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          tier: infrastructure
+        annotations:
+          summary: "AKS Node is Not Ready (instance {{ $labels.node }})"
+          description: "Cluster Node {{ $labels.node }} has been in unready state for more than 5 minutes."
+          runbook_url: "https://github.com/Deenanath486/azure-observability-prometheus-grafana/blob/main/docs/incident-runbooks/runbook-nodenotready.md"
+
+      - alert: KubeNodeMemoryPressure
+        expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          tier: infrastructure
+        annotations:
+          summary: "AKS Node under Memory Pressure (instance {{ $labels.node }})"
+          description: "Node {{ $labels.node }} has signaled MemoryPressure condition."
+
+      - alert: KubeNodeDiskPressure
+        expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          tier: infrastructure
+        annotations:
+          summary: "AKS Node under Disk Pressure (instance {{ $labels.node }})"
+          description: "Node {{ $labels.node }} has signaled DiskPressure condition. Eviction of pods may begin soon."
+
+      - alert: NodeDiskSpacePredictiveFilling
+        expr: (node_filesystem_free_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"} < 0.15) and (predict_linear(node_filesystem_free_bytes[4h], 8 * 3600) < 0)
+        for: 15m
+        labels:
+          severity: warning
+          tier: storage
+        annotations:
+          summary: "Node disk will fill within 8 hours based on linear prediction (node {{ $labels.instance }})"
+          description: "Filesystem {{ $labels.mountpoint }} on node {{ $labels.instance }} has less than 15% free space and is filling fast."

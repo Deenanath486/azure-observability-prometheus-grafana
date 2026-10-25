@@ -1,0 +1,44 @@
+groups:
+  - name: kubernetes-apps-alerts
+    rules:
+      - alert: KubePodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[5m]) * 60 > 2
+        for: 5m
+        labels:
+          severity: critical
+          tier: platform
+        annotations:
+          summary: "Pod is crashing frequently (instance {{ $labels.instance }})"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is restarting {{ $value }} times per minute."
+          runbook_url: "https://github.com/Deenanath486/azure-observability-prometheus-grafana/blob/main/docs/incident-runbooks/runbook-crashloopbackoff.md"
+
+      - alert: KubeContainerOOMKilled
+        expr: (kube_pod_container_status_terminated_reason{reason="OOMKilled"} > 0)
+        for: 1m
+        labels:
+          severity: critical
+          tier: compute
+        annotations:
+          summary: "Container killed by Out-Of-Memory (OOM) (instance {{ $labels.instance }})"
+          description: "Container {{ $labels.container }} in Pod {{ $labels.namespace }}/{{ $labels.pod }} was terminated due to OOMKilled."
+          runbook_url: "https://github.com/Deenanath486/azure-observability-prometheus-grafana/blob/main/docs/incident-runbooks/runbook-oomkilled.md"
+
+      - alert: KubeDeploymentReplicasMismatch
+        expr: kube_deployment_status_replicas_available != kube_deployment_spec_replicas
+        for: 10m
+        labels:
+          severity: warning
+          tier: platform
+        annotations:
+          summary: "Deployment replicas mismatch (instance {{ $labels.instance }})"
+          description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has {{ $value }} available replicas, expected {{ $labels.spec_replicas }}."
+
+      - alert: KubeCPUThrottlingHigh
+        expr: sum(increase(container_cpu_cfs_throttled_periods_total[5m])) by (container, pod, namespace) / sum(increase(container_cpu_cfs_periods_total[5m])) by (container, pod, namespace) > 0.25
+        for: 15m
+        labels:
+          severity: warning
+          tier: performance
+        annotations:
+          summary: "Container CPU is experiencing heavy throttling (> 25%)"
+          description: "{{ $labels.namespace }}/{{ $labels.pod }} [{{ $labels.container }}] is being throttled {{ $value | humanizePercentage }} of CFS periods."

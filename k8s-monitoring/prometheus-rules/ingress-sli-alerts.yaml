@@ -1,0 +1,24 @@
+groups:
+  - name: ingress-sli-alerts
+    rules:
+      - alert: HttpHigh5xxErrorRateSpike
+        expr: (sum(rate(nginx_ingress_controller_requests{status=~"5.*"}[5m])) / sum(rate(nginx_ingress_controller_requests[5m]))) * 100 > 5
+        for: 3m
+        labels:
+          severity: critical
+          tier: networking
+          slo: availability
+        annotations:
+          summary: "HTTP 5xx Error Rate > 5% on Ingress (service {{ $labels.ingress }})"
+          description: "Over 5% of requests to ingress {{ $labels.ingress }} in namespace {{ $labels.exported_namespace }} are returning 5xx server errors."
+
+      - alert: HttpP99LatencyBreach
+        expr: histogram_quantile(0.99, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le, ingress)) > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          tier: networking
+          slo: latency
+        annotations:
+          summary: "P99 Latency exceeds 1500ms on Ingress {{ $labels.ingress }}"
+          description: "99th percentile response latency for {{ $labels.ingress }} has exceeded 1.5 seconds for 5 consecutive minutes."
